@@ -1,8 +1,20 @@
 import os
 
 from .models import PageView
-from .database import info
 from django.test import TestCase
+from django.conf import settings
+
+
+def info():
+    return {
+        'NAME': "sqlite",
+        'engine': "SQLite",
+        'url': os.path.join(settings.BASE_DIR, 'db.sqlite3'),
+        'is_sqlite': True,
+    }
+
+TEST_DATABASE_PREFIX = 'test_'
+
 
 # These basic tests are to be used as an example for running tests in S2I
 # and OpenShift when building an application image.

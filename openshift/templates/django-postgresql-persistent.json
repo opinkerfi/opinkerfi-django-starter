@@ -477,7 +477,7 @@
       "displayName": "Git Repository URL",
       "required": true,
       "description": "The URL of the repository with your application source code.",
-      "value": "https://github.com/sclorg/django-ex.git"
+      "value": "git@gitlab.com:opinkerfi-opensource/opinkerfi-django-starter.git"
     },
     {
       "name": "SOURCE_REPOSITORY_REF",

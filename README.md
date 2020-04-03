@@ -6,13 +6,13 @@ The steps in this document assume that you have access to an OpenShift deploymen
 
 ## What has been done for you
 
-This is a minimal Django 1.11 project. It was created with these steps:
+This is a minimal Django 2.0 project. It was created with these steps:
 
 1. Create a virtualenv
 2. Manually install Django and other dependencies
 3. `pip freeze > requirements.txt`
 4. `django-admin startproject project .`
-3. Update `project/settings.py` to configure `SECRET_KEY`, `DATABASE` and `STATIC_ROOT` entries
+3. Update `project/production.py` and `project/local.py` to configure `SECRET_KEY`, `DATABASE` and `STATIC_ROOT` entries
 4. `./manage.py startapp welcome`, to create the welcome page's app
 
 From this initial state you can:
@@ -20,7 +20,7 @@ From this initial state you can:
 * remove the `welcome` app
 * rename the Django project
 * update settings to suit your needs
-* install more Python libraries and add them to the `requirements.txt` file
+* install more Python libraries and add them to the `requirements/base.txt` file
 
 ## Special files in this repository
 
@@ -59,15 +59,18 @@ To run this project in your development machine, follow these steps:
 
 3. Fork this repo and clone your fork:
 
-    `git clone https://github.com/sclorg/django-ex.git`
+    `git clone https://gitlab.com/opinkerfi-opensource/opinkerfi-django-starter.git`
 
 4. Install dependencies:
 
-    `pip install -r requirements.txt`
+    `pip install -r requirements/local.txt`
 
-5. Create a development database:
-
-    `./manage.py migrate`
+5. Set environment for local development, so settings are loaded from project/local.py and create a development database:
+    
+```
+export DJANGO_SETTINGS_MODULE=project.local
+./manage.py migrate
+```
 
 6. If everything is alright, you should be able to start the Django development server:
 
@@ -85,11 +88,8 @@ To follow the next steps, you need to be logged in to an OpenShift cluster and h
 
 The directory `openshift/templates/` contains OpenShift application templates that you can add to your OpenShift project with:
 
-    oc create -f openshift/templates/<TEMPLATE_NAME>.json
+    oc create -f openshift/templates/django-postgresql-persistent.json
 
-The template `django.json` contains just a minimal set of components to get your Django application into OpenShift.
-
-The template `django-postgresql.json` contains all of the components from `django.json`, plus a PostgreSQL database service and an Image Stream for the Python base image. For simplicity, the PostgreSQL database in this template uses ephemeral storage and, therefore, is not production ready.
 
 After adding your templates, you can go to your OpenShift web console, browse to your project and click the create button. Create a new app from one of the templates that you have just added.
 
@@ -97,7 +97,7 @@ Adjust the parameter values to suit your configuration. Most times you can just 
 
 Alternatively, you can use the command line to create your new app, assuming your OpenShift deployment has the default set of ImageStreams defined.  Instructions for installing the default ImageStreams are available [here](https://docs.okd.io/latest/install_config/imagestreams_templates.html).  If you are defining the set of ImageStreams now, remember to pass in the proper cluster-admin credentials and to create the ImageStreams in the 'openshift' namespace:
 
-    oc new-app openshift/templates/django.json -p SOURCE_REPOSITORY_URL=<your repository location>
+    oc new-app openshift/templates/django-postgresql-persistent.json -p SOURCE_REPOSITORY_URL=<your repository location>
 
 Your application will be built and deployed automatically. If that doesn't happen, you can debug your build:
 
@@ -112,25 +112,6 @@ And you can see information about your deployment too:
 In the web console, the overview tab shows you a service, by default called "django-example", that encapsulates all pods running your Django application. You can access your application by browsing to the service's IP address and port.  You can determine these by running
 
     oc get svc
-
-
-### Without an application template
-
-Templates give you full control of each component of your application.
-Sometimes your application is simple enough and you don't want to bother with templates. In that case, you can let OpenShift inspect your source code and create the required components automatically for you:
-
-```bash
-$ oc new-app centos/python-35-centos7~https://github.com/sclorg/django-ex
-imageStreams/python-35-centos7
-imageStreams/django-ex
-buildConfigs/django-ex
-deploymentConfigs/django-ex
-services/django-ex
-A build was created - you can run `oc start-build django-ex` to start it.
-Service "django-ex" created at 172.30.16.213 with port mappings 8080.
-```
-
-You can access your application by browsing to the service's IP address and port.
 
 
 ## Logs
@@ -187,31 +168,17 @@ Related GitHub issues:
 
 The wrapper script combines the steps above into one. You can use it like this:
 
-    ./run-in-container.sh ./manage.py migrate          # manually migrate the database
-                                                       # (done for you as part of the deployment process)
-    ./run-in-container.sh ./manage.py createsuperuser  # create a user to access Django Admin
-    ./run-in-container.sh ./manage.py shell            # open a Python shell in the context of your app
+    ./run-in-container.sh "./manage.py migrate"         # manually migrate the database
+                                                        # (done for you as part of the deployment process)
+    ./run-in-container.sh "./manage.py createsuperuser" # create a user to access Django Admin
+    ./run-in-container.sh "./manage.py shell"           # open a Python shell in the context of your app
 
-If your Django pods are labeled with a name other than "django", you can use:
-
-    POD_NAME=name ./run-in-container.sh ./manage.py check
-
-If there is more than one replica, you can also specify a POD by index:
-
-    POD_INDEX=1 ./run-in-container.sh ./manage.py shell
-
-Or both together:
-
-    POD_NAME=django-example POD_INDEX=2 ./run-in-container.sh ./manage.py shell
+If your Django pods are labeled with a name other than "django-psql-persistent", you will need to edit the run-in-container.sh file
 
 
 ## Data persistence
 
-You can deploy this application without a configured database in your OpenShift project, in which case Django will use a temporary SQLite database that will live inside your application's container, and persist only until you redeploy your application.
-
-After each deploy you get a fresh, empty, SQLite database. That is fine for a first contact with OpenShift and perhaps Django, but sooner or later you will want to persist your data across deployments.
-
-To do that, you should add a properly configured database server or ask your OpenShift administrator to add one for you. Then use `oc env` to update the `DATABASE_*` environment variables in your DeploymentConfig to match your database settings.
+You should add a properly configured database server or ask your OpenShift administrator to add one for you. Then use `oc env` to update the `DATABASE_*` environment variables in your DeploymentConfig to match your database settings.  The template will generate values for these as well.
 
 Redeploy your application to have your changes applied, and open the welcome page again to make sure your application is successfully connected to the database server.
 
@@ -220,6 +187,12 @@ Redeploy your application to have your changes applied, and open the welcome pag
 
 If you get stuck at some point, or think that this document needs further details or clarification, you can give feedback and look for help using the channels mentioned in [the OKD repo](https://github.com/openshift/origin), or by filing an issue.
 
+
+## References
+
+This project is heavily inspired by:
+* [Openshift quickstart: Django](https://github.com/sclorg/django-ex)
+* [Cookiecutter Django](https://github.com/pydanny/cookiecutter-django)
 
 ## License
 

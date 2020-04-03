@@ -19,23 +19,13 @@
 #     ./run-in-container.sh ./manage.py createsuperuser
 #     ./run-in-container.sh ./manage.py shell
 #
-# If your Python pods are labeled with a name other than "django", you can use:
-#
-#     POD_NAME=name ./run-in-container.sh ./manage.py check
-#
-# If there is more than one replica, you can also specify a POD by index:
-#
-#     POD_INDEX=1 ./run-in-container.sh ./manage.py shell
-#
-# Or both together:
-#
-#     POD_NAME=frontend POD_INDEX=2 ./run-in-container.sh ./manage.py shell
 
+POD_NAME=django-psql-persistent
 
 # Get name of a currently deployed pod by label and index
 POD_INSTANCE_NAME=`oc get pods \
   -l "name=${POD_NAME:-django-frontend}" \
-  -t "{{ with index .items ${POD_INDEX:-0} }}{{ .metadata.name }}{{ end }}"`
+  --template "{{ with index .items ${POD_INDEX:-0} }}{{ .metadata.name }}{{ end }}"`
 
 # Run command in a container of the specified pod:
-oc exec -p "$POD_INSTANCE_NAME" -it -- bash -c "${@:-echo}"
+oc exec "$POD_INSTANCE_NAME" -it -- bash -c "${@:-echo}"
