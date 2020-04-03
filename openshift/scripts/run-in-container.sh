@@ -20,7 +20,7 @@
 #     ./run-in-container.sh ./manage.py shell
 #
 
-POD_NAME=django-psql-persistent
+POD_NAME=opinkerfi-django-starter
 
 # Get name of a currently deployed pod by label and index
 POD_INSTANCE_NAME=`oc get pods \
